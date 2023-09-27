@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: http://red-fox.org/sitemap.xml

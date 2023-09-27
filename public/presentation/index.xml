@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Presentations on Red Fox</title>
+    <link>http://red-fox.org/presentation/</link>
+    <description>Recent content in Presentations on Red Fox</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language><atom:link href="http://red-fox.org/presentation/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Who am i</title>
+      <link>http://red-fox.org/presentation/whoami/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>http://red-fox.org/presentation/whoami/</guid>
+      <description>Hi there, I&amp;rsquo;m Dorian. I&amp;rsquo;m a technical account manager at Red Hat but before that I&amp;rsquo;m a passionate of technologies, automation and open sources.</description>
+    </item>
+    
+  </channel>
+</rss>
