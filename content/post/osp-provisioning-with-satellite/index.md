@@ -1,10 +1,12 @@
 ---
-title: "osp provisionning with satellite"
+title: "osp provisioning with satellite"
 slug: "osp provisioning with satellite"
 date: "2024-01-01 00:00:00+0000"
 weight: 1
 tags: 
-   - provisionning
+   - provisioning
+   - openstack
+   - satellite
 categories: 
    - Red Hat
 ---
