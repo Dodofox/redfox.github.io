@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>Red Hat on RedFox</title>
+        <link>http://localhost:1313/fr/categories/red-hat/</link>
+        <description>Recent content in Red Hat on RedFox</description>
+        <generator>Hugo -- gohugo.io</generator>
+        <language>fr</language>
+        <lastBuildDate>Mon, 01 Jan 2024 00:00:00 +0000</lastBuildDate><atom:link href="http://localhost:1313/fr/categories/red-hat/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>osp provisionning with satellite</title>
+        <link>http://localhost:1313/fr/post/osp-provisionning-with-satellite/</link>
+        <pubDate>Mon, 01 Jan 2024 00:00:00 +0000</pubDate>
+        
+        <guid>http://localhost:1313/fr/post/osp-provisionning-with-satellite/</guid>
+        <description>&lt;h1 id=&#34;créer-des-machines-sans-pxe-ni-compute-ressource-sur-osp-via-satellite&#34;&gt;
+    &lt;a href=&#34;#cr%c3%a9er-des-machines-sans-pxe-ni-compute-ressource-sur-osp-via-satellite&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Créer des machines sans PXE ni Compute ressource sur OSP via satellite
+&lt;/h1&gt;&lt;h2 id=&#34;introduction&#34;&gt;
+    &lt;a href=&#34;#introduction&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Introduction
+&lt;/h2&gt;&lt;p&gt;Au jour le jour, je travaille sur mon lab qui tourne exclusivement sur openstack que je peux reconstruire à souhait grâce a Ansible (j&amp;rsquo;en ferai probablement un article un jour).&lt;/p&gt;
+&lt;p&gt;J&amp;rsquo;ai eu affaire à une situation ou j&amp;rsquo;ai eu besoin de tester du PXE-less provisioning avec satellite sans utiliser de compute ressource. Comme tout bon ingénieur système qui se respecte, j&amp;rsquo;ai préféré tester sur mon lab existant plutôt que d&amp;rsquo;en monter un sur un outil plus approprié a ce besoin (qui m&amp;rsquo;aurait sans doute pris moins de temps au final).&lt;/p&gt;
+&lt;p&gt;Je trouve interessant de partager ce sujet, déjà parcequ&amp;rsquo;il a titillé ma curiosité, que j&amp;rsquo;y ai passé du temps. Mais également car il met en avant une méthode de provisionning peu utilisée avec Satellite.&lt;/p&gt;
+&lt;h2 id=&#34;description-de-lenvironnement&#34;&gt;
+    &lt;a href=&#34;#description-de-lenvironnement&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Description de l&amp;rsquo;environnement
+&lt;/h2&gt;&lt;p&gt;Lorsque je rédige un article je tente toujours d&amp;rsquo;être le plus à jour possible. Cependant certaines choses ne dépendent pas de moi voici donc les technologies et version utilisées:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Red Hat Openstack 17.1&lt;/li&gt;
+&lt;li&gt;Red Hat Satellite 6.15 (sous RHEL 8 latest)&lt;/li&gt;
+&lt;li&gt;Creation d&amp;rsquo;un serveur RHEL 9.4&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;procédure&#34;&gt;
+    &lt;a href=&#34;#proc%c3%a9dure&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Procédure
+&lt;/h2&gt;&lt;h3 id=&#34;préparation-satellite&#34;&gt;
+    &lt;a href=&#34;#pr%c3%a9paration-satellite&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Préparation Satellite
+&lt;/h3&gt;&lt;p&gt;Il y a toute une série de choses à préparer sur un satellite fraichement sortie, il est possible que sur un environnement existant ce soit déjà bon.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Activer le httpboot sur satellite&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;satellite-installer --foreman-proxy-http true --foreman-proxy-httpboot true
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;J&amp;rsquo;en profite pour rappeler que les options non spécifiées ici sont gardées en l&amp;rsquo;état, il n&amp;rsquo;est pas nécessaire de lister tout ce qui a été modifiée depuis la création du cluster.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Product&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Il faudra impérativement avoir les repositories BaseOS et Appstream ainsi que les repositories kickstart (toujours BaseOS et Appstream).&lt;/p&gt;
+&lt;p&gt;Dans Content -&amp;gt; Red Hat Reporistories il faut les activer, puis dans Content -&amp;gt; Product il faut les synchroniser (un sync plan est encore mieux)&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Content Views (CV)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Il faudra pour chaque OS, avoir une CV ou une composite content view (CCV) contenant les 4 repos et publiés sur les lifecycle adéquats.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Domain et Subnet&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;C&amp;rsquo;est une étape cruciale, pour que cette procédure fonctionne il faut être en mesure d&amp;rsquo;associé, sur satellite, une adresse IP et un domaine au futur hôte. Il faut donc bien configurer ceux-ci.&lt;/p&gt;
+&lt;p&gt;Pour la partie domaine : Infrastructure -&amp;gt; Domains  puis Create Domain. Il suffit de spécifier le nom de domaine DNS et bien penser à assigner celui-ci au &amp;ldquo;location&amp;rdquo; et aux &amp;ldquo;organisations&amp;rdquo; nécessaires.&lt;/p&gt;
+&lt;p&gt;Pour le subnet : Infrastructure -&amp;gt; Subnets puis Create Subnet. Remplir les champs obligatoire. Puis bien penser à rajouter un Primary DNS Server (il sera utiliser pour traduire le nom du satellite et/ou de la capsule), Boot Mode &amp;ldquo;Static&amp;rdquo;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Provisioning template&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Là aussi c&amp;rsquo;est une étape importante pour le bon fonctionnement, vous pouvez très bien utiliser vos propre provisioning template, ou partir de celui par défaut (kickstart default), mais il faut vous assurer que la comamnd &amp;ldquo;reboot&amp;rdquo; ne soit pas présente.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Host group&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Pour créer/modifier un Host group c&amp;rsquo;est dans Configure -&amp;gt; Host Groups&lt;/p&gt;
+&lt;p&gt;C&amp;rsquo;est dans les onglets &amp;ldquo;Operating System&amp;rdquo; et &amp;ldquo;Activation keys&amp;rdquo; que je vais détailler, pour le reste c&amp;rsquo;est conforme à un usage habituel.&lt;/p&gt;
+&lt;p&gt;Dans Operating system il faut choisir l&amp;rsquo;OS (correspondant a la version des repo Kickstart synchronisés), bien garder les media sur Synced content et vérifier qu&amp;rsquo;il utilise bien le repo basos kickstart de la version cible. Il est interessant aussi de spécifier le mot de passe root s&amp;rsquo;il est générique, sinon il ne faudra pas oublier de le créer lors d&amp;rsquo;une étape ultérieure.&lt;/p&gt;
+&lt;p&gt;Dans Actiovation keys, il faut bien spécifier celle qui permettra l&amp;rsquo;association à la CV/CCV.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Operating System (OS)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Il faut s&amp;rsquo;assurer que l&amp;rsquo;OS que l&amp;rsquo;ont souhaite utiliser utilise le bon provisioning template.&lt;/p&gt;
+&lt;p&gt;Pour ce faire, on va dans Hosts -&amp;gt; Provisioning Setup -&amp;gt; Operating System et on choisi ceux que l&amp;rsquo;on souhaite utiliser, dans l&amp;rsquo;onglet &amp;ldquo;Templates&amp;rdquo; on selectionne le bon à la ligne &amp;ldquo;Provisioning template&amp;rdquo; celui spécifié précedemment.&lt;/p&gt;
+&lt;h3 id=&#34;préparation-openstack-osp&#34;&gt;
+    &lt;a href=&#34;#pr%c3%a9paration-openstack-osp&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Préparation Openstack (OSP)
+&lt;/h3&gt;&lt;p&gt;Je vous rassure, le plus dur est fait. Côté OSP, il y a là aussi besoin de préparer le terrain.&lt;/p&gt;
+&lt;p&gt;Je pars du principe que côté OSP vous avez déjà ce qu&amp;rsquo;il faut en terme de projet ( network, subnet, flavor, etc&amp;hellip;)&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Preparation d&amp;rsquo;un port reseau&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Satellite ayant besoin, lors de la création d&amp;rsquo;un hôte, de spécifier une adresse mac, nous allons préparer un port et lui attribuer une adresse IP&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;openstack port create --network &amp;lt;network name&amp;gt; --fixed-ip subnet=&amp;lt;subnet name&amp;gt;,ip-address=&amp;lt;choosen ipv4&amp;gt; &amp;lt;interface name&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Bien penser à récupérer l&amp;rsquo;adresse mac de la carte réseau fraichement créée&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;openstack port show &amp;lt;interface name&amp;gt; | grep &amp;#34;mac_address&amp;#34;
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&#34;provisioning-de-lhôte&#34;&gt;
+    &lt;a href=&#34;#provisioning-de-lh%c3%b4te&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Provisioning de l&amp;rsquo;hôte
+&lt;/h3&gt;&lt;p&gt;Enfin l&amp;rsquo;étape que l&amp;rsquo;on attendait tous.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Création d&amp;rsquo;un hôte sous Satellite&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;On va d&amp;rsquo;abord créer un hôte sous satellite.&lt;/p&gt;
+&lt;p&gt;Hosts -&amp;gt; Create Host&lt;/p&gt;
+&lt;p&gt;on spécifier les éléments suivant&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;Name: hostname du futur hôte&lt;/li&gt;
+&lt;li&gt;Organisation &amp;amp; Location&lt;/li&gt;
+&lt;li&gt;Host Group: celui spéicifé précédemment -&amp;gt; cela va remplir automatiquement le reste des champs de cet onglet et de &amp;ldquo;Operating System&amp;rdquo;&lt;/li&gt;
+&lt;li&gt;Dans Interface, on clique sur Edit de l&amp;rsquo;interface existante.
+&lt;ul&gt;
+&lt;li&gt;On mentionne l&amp;rsquo;adresse mac que l&amp;rsquo;on vient de récupérer&lt;/li&gt;
+&lt;li&gt;On spécifie le domaine ainsi que le subnet&lt;/li&gt;
+&lt;li&gt;On mentionne l&amp;rsquo;adresse IPV4 utilisé pour créer le port sous openstack&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Maintenant l&amp;rsquo;hôte est créé côté satellite, a ce moment là il est dans le status &amp;ldquo;Pending installation&amp;rdquo;. C&amp;rsquo;est ce status particulier qui nous permet de récupérer l&amp;rsquo;étape clé de ce système de provisioning. Le Full host image.&lt;/p&gt;
+&lt;p&gt;Pour ce faire, sur la page de l&amp;rsquo;hôte sur laquelle vous vous trouvez (si votre curiosité ne vous à pas pousser à changer de fenêtre entre temps, sinon vous pouvez le retrouver en allant sur Hosts -&amp;gt; all hosts et en cliquant sur le nom de l&amp;rsquo;hôte que vous venez de créer). En haut à droite, à côté de &amp;ldquo;Edit&amp;rdquo; vous pouvez cliquer sur les 3 petits points puis sur &amp;ldquo;Full host &amp;lsquo;&lt;!-- raw HTML omitted --&gt;&amp;rsquo; image&amp;rdquo;.&lt;/p&gt;
+&lt;p&gt;L&amp;rsquo;image iso comportant toutes les informations pour builder cet hôte est alors télécharger sur votre poste.&lt;/p&gt;
+&lt;p&gt;Ne vous inquiétez pas, il ne s&amp;rsquo;agit là enfaite que d&amp;rsquo;une image &amp;ldquo;discover foreman&amp;rdquo; sur laquelle a été surchargé les informations de nom, d&amp;rsquo;adresse IP et pour laquelle a été créé une adresse sur satellite pour venir récupérer le fichier kickstart. Le poid de cette image ne devrait pas trop s&amp;rsquo;écarte de la 100aine de Mo.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Import de l&amp;rsquo;image côté openstack&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Maintenant que nous avons cet iso, sous openstack nous allons pouvoir créer l&amp;rsquo;image associée a celui-ci.&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;openstack image create --disk-format iso --file &amp;lt;image name&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;
+&lt;li&gt;Lancement du provisioning&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Maintenant que tout est prêt, il ne reste plus qu&amp;rsquo;à lancer l&amp;rsquo;installation de notre instance. Comme nous allons un peu à l&amp;rsquo;encontre des principes de base OSP voici comment nous allons nous y prendre&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;Creation d&amp;rsquo;une instance qui va démarrer sur l&amp;rsquo;image a laquelle on va associer un volume non temporaire&lt;/li&gt;
+&lt;li&gt;Une fois l&amp;rsquo;installation terminée (en attente de reboot), on va supprimer cette instance (le volume ne sera pas supprimé)&lt;/li&gt;
+&lt;li&gt;On créer une nouvelle instance qui va démarrer sur le volume fraichement installé&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Et voilà ! Nous disposons d&amp;rsquo;une instance provisionnée par notre satellite.&lt;/p&gt;
+&lt;h2 id=&#34;conclusion&#34;&gt;
+    &lt;a href=&#34;#conclusion&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Conclusion
+&lt;/h2&gt;&lt;p&gt;Dans une démarche de pouvoir reproduire un comportement, j&amp;rsquo;ai pu me servir du système de provisioning satellite sans PXE en utilisant les &amp;ldquo;full host image&amp;rdquo;.&lt;/p&gt;
+&lt;p&gt;Evidemment une fois la partie préparation faite, on peut envisager d&amp;rsquo;automatiser la partie &amp;ldquo;Provisioning de l&amp;rsquo;hôte&amp;rdquo; via un playbook ansible qui attend en entrée les informations importants&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;OS&lt;/li&gt;
+&lt;li&gt;Hostname&lt;/li&gt;
+&lt;li&gt;IPV4&lt;/li&gt;
+&lt;li&gt;etc&amp;hellip;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+        </item>
+        <item>
+        <title>luks and smartcard</title>
+        <link>http://localhost:1313/fr/post/luks-and-smartcard/</link>
+        <pubDate>Sun, 01 Jan 2023 00:00:00 +0000</pubDate>
+        
+        <guid>http://localhost:1313/fr/post/luks-and-smartcard/</guid>
+        <description></description>
+        </item>
+        
+    </channel>
+</rss>

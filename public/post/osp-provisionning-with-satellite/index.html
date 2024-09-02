@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+    <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="# Creating Machines without PXE or Compute Resources on OpenStack via Satellite # Introduction In my daily life as a sysadmin, I spend a lot of time in my lab, which runs exclusively on OpenStack, and which I can rebuild at will thanks to Ansible (I feel an article about this coming soon). Recently, I faced an interesting challenge: testing PXE-less provisioning with Satellite without using compute resources. Like any self-respecting system engineer, I preferred to test this on my existing lab rather than create an environment more suited to this need, even though, let&rsquo;s be honest, it would probably have saved me time in the end.">
+<title>osp provisionning with satellite</title>
+
+<link rel='canonical' href='http://localhost:1313/post/osp-provisionning-with-satellite/'>
+
+<link rel="stylesheet" href="/scss/style.min.760e3dabc1e140d2e6abd27a8ca0aabb60e568829b29f67d2df12024136eff37.css"><meta property='og:title' content="osp provisionning with satellite">
+<meta property='og:description' content="# Creating Machines without PXE or Compute Resources on OpenStack via Satellite # Introduction In my daily life as a sysadmin, I spend a lot of time in my lab, which runs exclusively on OpenStack, and which I can rebuild at will thanks to Ansible (I feel an article about this coming soon). Recently, I faced an interesting challenge: testing PXE-less provisioning with Satellite without using compute resources. Like any self-respecting system engineer, I preferred to test this on my existing lab rather than create an environment more suited to this need, even though, let&rsquo;s be honest, it would probably have saved me time in the end.">
+<meta property='og:url' content='http://localhost:1313/post/osp-provisionning-with-satellite/'>
+<meta property='og:site_name' content='RedFox'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:tag' content='provisionning' /><meta property='article:published_time' content='2024-01-01T00:00:00&#43;00:00'/><meta property='article:modified_time' content='2024-01-01T00:00:00&#43;00:00'/>
+<meta name="twitter:title" content="osp provisionning with satellite">
+<meta name="twitter:description" content="# Creating Machines without PXE or Compute Resources on OpenStack via Satellite # Introduction In my daily life as a sysadmin, I spend a lot of time in my lab, which runs exclusively on OpenStack, and which I can rebuild at will thanks to Ansible (I feel an article about this coming soon). Recently, I faced an interesting challenge: testing PXE-less provisioning with Satellite without using compute resources. Like any self-respecting system engineer, I preferred to test this on my existing lab rather than create an environment more suited to this need, even though, let&rsquo;s be honest, it would probably have saved me time in the end.">
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="Toggle Menu">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/redfoxlogomini_hufd7daa78f73a0ea9a2b095306d3c61af_31740_300x0_resize_q75_box.jpeg" width="300"
+                            height="278" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">RedFox</a></h1>
+            <h2 class="site-description"></h2>
+        </div>
+    </header><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>Home</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/page/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>Archives</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/page/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>Search</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/page/who-am-i/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>Who am I</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+                    
+                        <li id="i18n-switch">  
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-language" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M4 5h7" />
+  <path d="M9 3v2c0 4.418 -2.239 8 -5 8" />
+  <path d="M5 9c-.003 2.144 2.952 3.908 6.7 4" />
+  <path d="M12 20l4 -9l4 9" />
+  <path d="M19.1 18h-6.2" />
+</svg>
+
+
+
+                            <select name="language" title="language" onchange="window.location.href = this.selectedOptions[0].value">
+                                
+                                    <option value="http://localhost:1313/" selected>English</option>
+                                
+                                    <option value="http://localhost:1313/fr/" >Français</option>
+                                
+                            </select>
+                        </li>
+                    
+                
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>Dark Mode</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    
+
+            <main class="main full-width">
+    <article class="main-article">
+    <header class="article-header">
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/red-hat/" >
+                Red Hat
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/post/osp-provisionning-with-satellite/">osp provisionning with satellite</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">Jan 01, 2024</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    6 minute read
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+        <footer class="article-translations">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-language" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M4 5h7" />
+  <path d="M9 3v2c0 4.418 -2.239 8 -5 8" />
+  <path d="M5 9c-.003 2.144 2.952 3.908 6.7 4" />
+  <path d="M12 20l4 -9l4 9" />
+  <path d="M19.1 18h-6.2" />
+</svg>
+
+
+
+            <div>
+                
+                    <a href="http://localhost:1313/fr/post/cr%C3%A9er-des-machines-sans-pxe-ni-compute-ressource-sur-openstack-via-satellite/" class="link">Français</a>
+                
+            </div>
+        </footer>
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h1 id="creating-machines-without-pxe-or-compute-resources-on-openstack-via-satellite">
+    <a href="#creating-machines-without-pxe-or-compute-resources-on-openstack-via-satellite" class="header-anchor">#</a>
+    Creating Machines without PXE or Compute Resources on OpenStack via Satellite
+</h1><h2 id="introduction">
+    <a href="#introduction" class="header-anchor">#</a>
+    Introduction
+</h2><p>In my daily life as a sysadmin, I spend a lot of time in my lab, which runs exclusively on OpenStack, and which I can rebuild at will thanks to Ansible (I feel an article about this coming soon). Recently, I faced an interesting challenge: testing PXE-less provisioning with Satellite without using compute resources. Like any self-respecting system engineer, I preferred to test this on my existing lab rather than create an environment more suited to this need, even though, let&rsquo;s be honest, it would probably have saved me time in the end.</p>
+<p>I thought it would be interesting to share this adventure, not only because it piqued my curiosity and took up a lot of my time, but also because this provisioning method is quite underused with Satellite.</p>
+<h2 id="environment-description">
+    <a href="#environment-description" class="header-anchor">#</a>
+    Environment Description
+</h2><p>As I like to be up to date in my articles, I specify the versions of the technologies used, even if some things are beyond my control (thanks to the endless updates).</p>
+<ul>
+<li><strong>Red Hat OpenStack 17.1</strong></li>
+<li><strong>Red Hat Satellite 6.15</strong> (on RHEL 8 latest)</li>
+<li><strong>Creation of a RHEL 9.4 server</strong></li>
+</ul>
+<h2 id="procedure">
+    <a href="#procedure" class="header-anchor">#</a>
+    Procedure
+</h2><h3 id="satellite-preparation">
+    <a href="#satellite-preparation" class="header-anchor">#</a>
+    Satellite Preparation
+</h3><p>If you&rsquo;re starting with a fresh Satellite installation, there are some essential steps you shouldn&rsquo;t miss. If your environment is already configured, some elements might already be in place.</p>
+<ul>
+<li>
+<p><strong>Enable HTTPBoot on Satellite</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>satellite-installer --foreman-proxy-http true --foreman-proxy-httpboot true
+</span></span></code></pre></div><p>A little reminder: unspecified options here remain unchanged, so there&rsquo;s no need to list everything that has been modified since the cluster was created.</p>
+</li>
+<li>
+<p><strong>Products</strong></p>
+<p>You must have the BaseOS and AppStream repositories, as well as the corresponding kickstart repositories.</p>
+<p>In <em>Content -&gt; Red Hat Repositories</em>, activate them, then in <em>Content -&gt; Product</em>, synchronize them (a sync plan will make things even smoother).</p>
+</li>
+<li>
+<p><strong>Content Views (CV)</strong></p>
+<p>For each OS, you will need a CV or a CCV (Composite Content View) containing the 4 repos and published on the appropriate lifecycles.</p>
+</li>
+<li>
+<p><strong>Domain and Subnet</strong></p>
+<p>This step is crucial: for everything to work, you need to associate an IP address and a domain with your future host. Make sure these elements are well configured.</p>
+<p>For the domain: <em>Infrastructure -&gt; Domains</em>, then <em>Create Domain</em>. Specify the DNS domain name and don’t forget to assign it to the necessary &ldquo;locations&rdquo; and &ldquo;organizations&rdquo;.</p>
+<p>For the subnet: <em>Infrastructure -&gt; Subnets</em>, then <em>Create Subnet</em>. Fill in the required fields and don&rsquo;t forget to add a Primary DNS server (it will be used to resolve the name of the Satellite and/or capsule), Boot Mode &ldquo;Static&rdquo;.</p>
+</li>
+<li>
+<p><strong>Provisioning Template</strong></p>
+<p>This is also an important step. You can use your own provisioning templates, or start with the default template (kickstart default), but make sure the &ldquo;reboot&rdquo; command is not present.</p>
+</li>
+<li>
+<p><strong>Host Group</strong></p>
+<p>To create or modify a Host Group: <em>Configure -&gt; Host Groups</em>.</p>
+<p>In the &ldquo;Operating System&rdquo; and &ldquo;Activation Keys&rdquo; tabs, I&rsquo;ll go into detail; for the rest, follow usual practices.</p>
+<p>In <em>Operating System</em>, choose the OS corresponding to the synchronized kickstart repo version, keep the media on Synced Content, and check that it is using the correct BaseOS kickstart repo for the target version. Also, consider specifying the root password if you&rsquo;re using a generic one, otherwise, don’t forget to create it in a subsequent step.</p>
+<p>In <em>Activation Keys</em>, make sure to specify the one that will allow the association to the CV/CCV.</p>
+</li>
+<li>
+<p><strong>Operating System (OS)</strong></p>
+<p>Ensure that the OS you want to use is correctly associated with the right provisioning template.</p>
+<p>To do this, go to <em>Hosts -&gt; Provisioning Setup -&gt; Operating System</em>, choose the desired OS, and in the &ldquo;Templates&rdquo; tab, select the correct template at the &ldquo;Provisioning Template&rdquo; line (the one specified earlier).</p>
+</li>
+</ul>
+<h3 id="openstack-osp-preparation">
+    <a href="#openstack-osp-preparation" class="header-anchor">#</a>
+    OpenStack (OSP) Preparation
+</h3><p>Rest assured, the hardest part is done. On the OSP side, there are also some preparations to make.</p>
+<p>I assume you already have what you need in terms of project (network, subnet, flavor, etc.).</p>
+<ul>
+<li>
+<p><strong>Preparing a Network Port</strong></p>
+<p>Since Satellite requires specifying a MAC address when creating a host, we will prepare a port and assign it an IP address.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>openstack port create --network &lt;network name&gt; --fixed-ip subnet<span style="color:#f92672">=</span>&lt;subnet name&gt;,ip-address<span style="color:#f92672">=</span>&lt;chosen ipv4&gt; &lt;interface name&gt;
+</span></span></code></pre></div><p>Be sure to retrieve the MAC address of the newly created network card:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>openstack port show &lt;interface name&gt; | grep <span style="color:#e6db74">&#34;mac_address&#34;</span>
+</span></span></code></pre></div></li>
+</ul>
+<h3 id="host-provisioning">
+    <a href="#host-provisioning" class="header-anchor">#</a>
+    Host Provisioning
+</h3><p>Finally, the long-awaited step!</p>
+<ul>
+<li>
+<p><strong>Creating a Host on Satellite</strong></p>
+<p>Create a new host on Satellite:</p>
+<p><em>Hosts -&gt; Create Host</em></p>
+<p>Specify the following elements:</p>
+<ul>
+<li><strong>Name</strong>: the hostname of the future server</li>
+<li><strong>Organization &amp; Location</strong></li>
+<li><strong>Host Group</strong>: the one specified earlier (this will automatically fill in the rest of the fields in this tab and the &ldquo;Operating System&rdquo; tab)</li>
+<li>In <em>Interface</em>, click <em>Edit</em> on the existing interface, then:
+<ul>
+<li>Enter the MAC address retrieved earlier</li>
+<li>Specify the domain and subnet</li>
+<li>Enter the IPv4 address used to create the port on OpenStack</li>
+</ul>
+</li>
+</ul>
+<p>The host is now created on the Satellite side, and it should be in &ldquo;Pending Installation&rdquo; status. This status is what allows us to retrieve the key step of this provisioning: the Full Host Image.</p>
+<p>To do this, on the host&rsquo;s page (if you haven’t succumbed to the temptation to switch tabs), click on the three little dots in the top right, then on &ldquo;Full host &lsquo;<!-- raw HTML omitted -->&rsquo; image&rdquo;.</p>
+<p>You will then download an ISO image containing all the necessary information to build this host. Don’t worry, this is actually just a &ldquo;discover foreman&rdquo; image with overloaded information such as the name, IP address, and a kickstart file to retrieve. The weight of this image shouldn’t exceed a hundred MB.</p>
+</li>
+<li>
+<p><strong>Importing the Image on OpenStack</strong></p>
+<p>Now that you have this ISO, on OpenStack, you can create the associated image:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>openstack image create --disk-format iso --file &lt;image name&gt;
+</span></span></code></pre></div></li>
+<li>
+<p><strong>Starting the Provisioning</strong></p>
+<p>Everything is ready, all that&rsquo;s left is to start the installation of the instance. Since we are going a bit against OSP&rsquo;s basic principles, here’s how to proceed:</p>
+<ol>
+<li>Create an instance that will boot from the image, to which you will associate a non-temporary volume.</li>
+<li>Once the installation is complete (waiting for reboot), delete this instance (the volume will not be deleted).</li>
+<li>Create a new instance that will boot from the freshly installed volume.</li>
+</ol>
+</li>
+</ul>
+<p>And that&rsquo;s it! You now have an instance provisioned by your Satellite.</p>
+<h2 id="conclusion">
+    <a href="#conclusion" class="header-anchor">#</a>
+    Conclusion
+</h2><p>In a reproducibility approach, I was able to use Satellite&rsquo;s PXE-less provisioning system by leveraging &ldquo;Full Host Images&rdquo;. Once the preparation part is done, we can even consider automating the host creation via an Ansible playbook, taking in the key information such as OS, hostname, IPv4, etc.</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+    <section class="article-tags">
+        
+            <a href="/tags/provisionning/">Provisionning</a>
+        
+    </section>
+
+
+    <section class="article-lastmod">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+        <span>
+            Last updated on Jan 01, 2024 00:00 UTC
+        </span>
+    </section></footer>
+
+
+    
+</article>
+
+    
+
+    
+
+     
+    
+        
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2024 RedFox
+    </section>
+    
+    <section class="powerby">
+        Built with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> <br />
+        Theme <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.25.0">Stack</a></b> designed by <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a>
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>

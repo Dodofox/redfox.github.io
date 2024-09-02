@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>RedFox</title>
+        <link>http://localhost:1313/</link>
+        <description>Recent content on RedFox</description>
+        <generator>Hugo -- gohugo.io</generator>
+        <language>en</language>
+        <lastBuildDate>Mon, 01 Jan 2024 00:00:00 +0000</lastBuildDate><atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>osp provisionning with satellite</title>
+        <link>http://localhost:1313/post/osp-provisioning-with-satellite/</link>
+        <pubDate>Mon, 01 Jan 2024 00:00:00 +0000</pubDate>
+        
+        <guid>http://localhost:1313/post/osp-provisioning-with-satellite/</guid>
+        <description>&lt;h1 id=&#34;creating-machines-without-pxe-or-compute-resources-on-openstack-via-satellite&#34;&gt;
+    &lt;a href=&#34;#creating-machines-without-pxe-or-compute-resources-on-openstack-via-satellite&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Creating Machines without PXE or Compute Resources on OpenStack via Satellite
+&lt;/h1&gt;&lt;h2 id=&#34;introduction&#34;&gt;
+    &lt;a href=&#34;#introduction&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Introduction
+&lt;/h2&gt;&lt;p&gt;In my daily life as a sysadmin, I spend a lot of time in my lab, which runs exclusively on OpenStack, and which I can rebuild at will thanks to Ansible (I feel an article about this coming soon). Recently, I faced an interesting challenge: testing PXE-less provisioning with Satellite without using compute resources. Like any self-respecting system engineer, I preferred to test this on my existing lab rather than create an environment more suited to this need, even though, let&amp;rsquo;s be honest, it would probably have saved me time in the end.&lt;/p&gt;
+&lt;p&gt;I thought it would be interesting to share this adventure, not only because it piqued my curiosity and took up a lot of my time, but also because this provisioning method is quite underused with Satellite.&lt;/p&gt;
+&lt;h2 id=&#34;environment-description&#34;&gt;
+    &lt;a href=&#34;#environment-description&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Environment Description
+&lt;/h2&gt;&lt;p&gt;As I like to be up to date in my articles, I specify the versions of the technologies used, even if some things are beyond my control (thanks to the endless updates).&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Red Hat OpenStack 17.1&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Red Hat Satellite 6.15&lt;/strong&gt; (on RHEL 8 latest)&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Creation of a RHEL 9.4 server&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;procedure&#34;&gt;
+    &lt;a href=&#34;#procedure&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Procedure
+&lt;/h2&gt;&lt;h3 id=&#34;satellite-preparation&#34;&gt;
+    &lt;a href=&#34;#satellite-preparation&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Satellite Preparation
+&lt;/h3&gt;&lt;p&gt;If you&amp;rsquo;re starting with a fresh Satellite installation, there are some essential steps you shouldn&amp;rsquo;t miss. If your environment is already configured, some elements might already be in place.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Enable HTTPBoot on Satellite&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;satellite-installer --foreman-proxy-http true --foreman-proxy-httpboot true
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;A little reminder: unspecified options here remain unchanged, so there&amp;rsquo;s no need to list everything that has been modified since the cluster was created.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Products&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;You must have the BaseOS and AppStream repositories, as well as the corresponding kickstart repositories.&lt;/p&gt;
+&lt;p&gt;In &lt;em&gt;Content -&amp;gt; Red Hat Repositories&lt;/em&gt;, activate them, then in &lt;em&gt;Content -&amp;gt; Product&lt;/em&gt;, synchronize them (a sync plan will make things even smoother).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Content Views (CV)&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;For each OS, you will need a CV or a CCV (Composite Content View) containing the 4 repos and published on the appropriate lifecycles.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Domain and Subnet&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;This step is crucial: for everything to work, you need to associate an IP address and a domain with your future host. Make sure these elements are well configured.&lt;/p&gt;
+&lt;p&gt;For the domain: &lt;em&gt;Infrastructure -&amp;gt; Domains&lt;/em&gt;, then &lt;em&gt;Create Domain&lt;/em&gt;. Specify the DNS domain name and don’t forget to assign it to the necessary &amp;ldquo;locations&amp;rdquo; and &amp;ldquo;organizations&amp;rdquo;.&lt;/p&gt;
+&lt;p&gt;For the subnet: &lt;em&gt;Infrastructure -&amp;gt; Subnets&lt;/em&gt;, then &lt;em&gt;Create Subnet&lt;/em&gt;. Fill in the required fields and don&amp;rsquo;t forget to add a Primary DNS server (it will be used to resolve the name of the Satellite and/or capsule), Boot Mode &amp;ldquo;Static&amp;rdquo;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Provisioning Template&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;This is also an important step. You can use your own provisioning templates, or start with the default template (kickstart default), but make sure the &amp;ldquo;reboot&amp;rdquo; command is not present.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Host Group&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;To create or modify a Host Group: &lt;em&gt;Configure -&amp;gt; Host Groups&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;In the &amp;ldquo;Operating System&amp;rdquo; and &amp;ldquo;Activation Keys&amp;rdquo; tabs, I&amp;rsquo;ll go into detail; for the rest, follow usual practices.&lt;/p&gt;
+&lt;p&gt;In &lt;em&gt;Operating System&lt;/em&gt;, choose the OS corresponding to the synchronized kickstart repo version, keep the media on Synced Content, and check that it is using the correct BaseOS kickstart repo for the target version. Also, consider specifying the root password if you&amp;rsquo;re using a generic one, otherwise, don’t forget to create it in a subsequent step.&lt;/p&gt;
+&lt;p&gt;In &lt;em&gt;Activation Keys&lt;/em&gt;, make sure to specify the one that will allow the association to the CV/CCV.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Operating System (OS)&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Ensure that the OS you want to use is correctly associated with the right provisioning template.&lt;/p&gt;
+&lt;p&gt;To do this, go to &lt;em&gt;Hosts -&amp;gt; Provisioning Setup -&amp;gt; Operating System&lt;/em&gt;, choose the desired OS, and in the &amp;ldquo;Templates&amp;rdquo; tab, select the correct template at the &amp;ldquo;Provisioning Template&amp;rdquo; line (the one specified earlier).&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;openstack-osp-preparation&#34;&gt;
+    &lt;a href=&#34;#openstack-osp-preparation&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    OpenStack (OSP) Preparation
+&lt;/h3&gt;&lt;p&gt;Rest assured, the hardest part is done. On the OSP side, there are also some preparations to make.&lt;/p&gt;
+&lt;p&gt;I assume you already have what you need in terms of project (network, subnet, flavor, etc.).&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Preparing a Network Port&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Since Satellite requires specifying a MAC address when creating a host, we will prepare a port and assign it an IP address.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;openstack port create --network &amp;lt;network name&amp;gt; --fixed-ip subnet&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&amp;lt;subnet name&amp;gt;,ip-address&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&amp;lt;chosen ipv4&amp;gt; &amp;lt;interface name&amp;gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Be sure to retrieve the MAC address of the newly created network card:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;openstack port show &amp;lt;interface name&amp;gt; | grep &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;mac_address&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;host-provisioning&#34;&gt;
+    &lt;a href=&#34;#host-provisioning&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Host Provisioning
+&lt;/h3&gt;&lt;p&gt;Finally, the long-awaited step!&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Creating a Host on Satellite&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Create a new host on Satellite:&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Hosts -&amp;gt; Create Host&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;Specify the following elements:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Name&lt;/strong&gt;: the hostname of the future server&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Organization &amp;amp; Location&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Host Group&lt;/strong&gt;: the one specified earlier (this will automatically fill in the rest of the fields in this tab and the &amp;ldquo;Operating System&amp;rdquo; tab)&lt;/li&gt;
+&lt;li&gt;In &lt;em&gt;Interface&lt;/em&gt;, click &lt;em&gt;Edit&lt;/em&gt; on the existing interface, then:
+&lt;ul&gt;
+&lt;li&gt;Enter the MAC address retrieved earlier&lt;/li&gt;
+&lt;li&gt;Specify the domain and subnet&lt;/li&gt;
+&lt;li&gt;Enter the IPv4 address used to create the port on OpenStack&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The host is now created on the Satellite side, and it should be in &amp;ldquo;Pending Installation&amp;rdquo; status. This status is what allows us to retrieve the key step of this provisioning: the Full Host Image.&lt;/p&gt;
+&lt;p&gt;To do this, on the host&amp;rsquo;s page (if you haven’t succumbed to the temptation to switch tabs), click on the three little dots in the top right, then on &amp;ldquo;Full host &amp;lsquo;&lt;!-- raw HTML omitted --&gt;&amp;rsquo; image&amp;rdquo;.&lt;/p&gt;
+&lt;p&gt;You will then download an ISO image containing all the necessary information to build this host. Don’t worry, this is actually just a &amp;ldquo;discover foreman&amp;rdquo; image with overloaded information such as the name, IP address, and a kickstart file to retrieve. The weight of this image shouldn’t exceed a hundred MB.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Importing the Image on OpenStack&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Now that you have this ISO, on OpenStack, you can create the associated image:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;openstack image create --disk-format iso --file &amp;lt;image name&amp;gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Starting the Provisioning&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Everything is ready, all that&amp;rsquo;s left is to start the installation of the instance. Since we are going a bit against OSP&amp;rsquo;s basic principles, here’s how to proceed:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Create an instance that will boot from the image, to which you will associate a non-temporary volume.&lt;/li&gt;
+&lt;li&gt;Once the installation is complete (waiting for reboot), delete this instance (the volume will not be deleted).&lt;/li&gt;
+&lt;li&gt;Create a new instance that will boot from the freshly installed volume.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;And that&amp;rsquo;s it! You now have an instance provisioned by your Satellite.&lt;/p&gt;
+&lt;h2 id=&#34;conclusion&#34;&gt;
+    &lt;a href=&#34;#conclusion&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Conclusion
+&lt;/h2&gt;&lt;p&gt;In a reproducibility approach, I was able to use Satellite&amp;rsquo;s PXE-less provisioning system by leveraging &amp;ldquo;Full Host Images&amp;rdquo;. Once the preparation part is done, we can even consider automating the host creation via an Ansible playbook, taking in the key information such as OS, hostname, IPv4, etc.&lt;/p&gt;
+</description>
+        </item>
+        <item>
+        <title>luks and smartcard</title>
+        <link>http://localhost:1313/post/luks-and-smartcard/</link>
+        <pubDate>Sun, 01 Jan 2023 00:00:00 +0000</pubDate>
+        
+        <guid>http://localhost:1313/post/luks-and-smartcard/</guid>
+        <description></description>
+        </item>
+        <item>
+        <title>Archives</title>
+        <link>http://localhost:1313/page/archives/</link>
+        <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+        
+        <guid>http://localhost:1313/page/archives/</guid>
+        <description></description>
+        </item>
+        <item>
+        <title>Search</title>
+        <link>http://localhost:1313/page/search/</link>
+        <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+        
+        <guid>http://localhost:1313/page/search/</guid>
+        <description></description>
+        </item>
+        <item>
+        <title>Who am I</title>
+        <link>http://localhost:1313/page/who-am-i/</link>
+        <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+        
+        <guid>http://localhost:1313/page/who-am-i/</guid>
+        <description>&lt;img src="http://localhost:1313/redfoxlogo.jpeg" alt="Featured image of post Who am I" /&gt;&lt;h1 id=&#34;welcome-on-red-fox-blog-&#34;&gt;
+    &lt;a href=&#34;#welcome-on-red-fox-blog-&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Welcome on Red Fox blog !
+&lt;/h1&gt;&lt;p&gt;My name is Dorian, and I am passionate about technology and open-source philosophy. On this blog, I enjoy exploring unconventional topics and sharing tips that you won’t always find in official documentation.&lt;/p&gt;
+&lt;p&gt;Here, curiosity is at the heart of everything we do. I love experimenting, testing new ideas, and sharing these discoveries with you. Whether it&amp;rsquo;s exploring new technologies or revisiting old concepts from a different perspective, this blog is a space dedicated to innovation and experimentation.&lt;/p&gt;
+&lt;p&gt;I invite you to join this journey of technological exploration, where each post is an opportunity to discover something new. Thank you for being part of this enriching adventure on the Red Fox Blog.&lt;/p&gt;
+</description>
+        </item>
+        
+    </channel>
+</rss>
