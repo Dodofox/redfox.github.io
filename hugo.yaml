@@ -1,0 +1,31 @@
+baseURL: 'https://redfox.org/'
+languageCode: 'en-us'
+title: 'RedFox'
+theme: "hugo-theme-stack"
+
+
+languages:
+  en:
+    languageName: "English"
+    weight: 1
+  fr:
+    languageName: "Français"
+
+DefaultContentLanguage: "en"
+hasCJKLanguage: false
+
+
+params:
+  author:
+    name: "Dorian Renard"
+  description: "RedFox the IT blog"
+  sidebar:
+    avatar:
+      src: "redfoxlogomini.jpeg"
+      local: true
+  widgets:
+    homepage:
+      - type: search
+      - type: archives
+      - type: categories
+      - type: tag-cloud

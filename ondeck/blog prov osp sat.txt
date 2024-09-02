@@ -1,0 +1,43 @@
+Quoi : 
+
+>Provisionner par kicsktart avec satellite un serveur sur openstack sans compute ressource
+
+Pourquoi : 
+>Certaine entreprise n'accepte pas la mise en place de compute ressource côté satellite nécessitant la création de compte de service ayant certain privilège.
+Afin d'éviter de tout scripter il est possible de se servir des images de boot 
+
+
+
+Prérequis :
+Satellite : 
+- product kickstart sur la release souhaitée dans une CV et synchronisé
+
+
+
+
+
+Procédure
+- OSP : create port 
+
+- Sat : create subnet
+
+- Sat : create host
+   - onglet Host : needed
+   - onglet OS : 
+      - Arch : what needed (e.g x86_64)
+      - Operating System ; Needed release
+      - Media kickstart repo
+      - Partition table : Default or customized one
+   - onglet Interfaces
+      - MAC address with the one of osp port
+      - Domain
+      
+- Sat: Download full host image
+
+- OSP: create image
+   - name
+   - Image Source - the full host iso (format iso)
+
+- OSP: create instance
+   - 
+

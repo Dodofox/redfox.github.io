@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>Pages on RedFox</title>
+        <link>http://localhost:1313/fr/page/</link>
+        <description>Recent content in Pages on RedFox</description>
+        <generator>Hugo -- gohugo.io</generator>
+        <language>fr</language><atom:link href="http://localhost:1313/fr/page/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>Archives</title>
+        <link>http://localhost:1313/fr/page/archives/</link>
+        <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+        
+        <guid>http://localhost:1313/fr/page/archives/</guid>
+        <description></description>
+        </item>
+        <item>
+        <title>Qui suis-je</title>
+        <link>http://localhost:1313/fr/page/who-am-i/</link>
+        <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+        
+        <guid>http://localhost:1313/fr/page/who-am-i/</guid>
+        <description>&lt;img src="http://localhost:1313/redfoxlogo.jpeg" alt="Featured image of post Qui suis-je" /&gt;&lt;h1 id=&#34;bienvenue-sur-le-blog-red-fox&#34;&gt;
+    &lt;a href=&#34;#bienvenue-sur-le-blog-red-fox&#34; class=&#34;header-anchor&#34;&gt;#&lt;/a&gt;
+    Bienvenue sur le blog Red Fox!
+&lt;/h1&gt;&lt;p&gt;Je m&amp;rsquo;appelle Dorian, et je suis passionné par la technologie et la philosophie open-source. Sur ce blog, j&amp;rsquo;aime explorer des sujets qui sortent de l&amp;rsquo;ordinaire et partager des astuces que l&amp;rsquo;on ne trouve pas toujours dans la documentation officielle.&lt;/p&gt;
+&lt;p&gt;Ici, la curiosité est au cœur de notre démarche. J&amp;rsquo;aime expérimenter, tester des nouveautés et partager ces découvertes avec vous. Que ce soit en explorant de nouvelles technologies ou en revisitant des concepts anciens sous un angle différent, ce blog est un espace dédié à l&amp;rsquo;innovation et à l&amp;rsquo;expérimentation.&lt;/p&gt;
+&lt;p&gt;Je vous invite à suivre ce voyage d&amp;rsquo;exploration technologique, où chaque article est une invitation à découvrir quelque chose de nouveau. Merci de faire partie de cette aventure enrichissante sur le blog Red Fox.&lt;/p&gt;
+</description>
+        </item>
+        <item>
+        <title>Search</title>
+        <link>http://localhost:1313/fr/page/search/</link>
+        <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+        
+        <guid>http://localhost:1313/fr/page/search/</guid>
+        <description></description>
+        </item>
+        
+    </channel>
+</rss>
