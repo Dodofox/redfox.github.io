@@ -1,6 +1,6 @@
 ---
-title: "osp provisioning with satellite"
-slug: "osp provisioning with satellite"
+title: "Provisioning Machines without PXE or Compute Resources on OpenStack via Satellite"
+slug: "Provisioning Machines without PXE or Compute Resources on OpenStack via Satellite"
 date: "2024-01-01 00:00:00+0000"
 weight: 1
 tags: 
